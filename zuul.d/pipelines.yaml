@@ -95,4 +95,3 @@
       gitlab:
         - event: gl_push
           ref: ^refs/tags/.*$
-
