@@ -1,15 +1,6 @@
 - project:
-    name: ^.*$
+    name: ^.*
+    # Attach every repo to the check pipeline so we can report invalid
+    # zuul.yaml files.
     check:
       jobs: []
-    gate:
-      jobs: []
-
-- project:
-    name: saneladinic/zuul-config
-    check:
-      jobs:
-        - noop
-    gate:
-      jobs:
-        - noop
