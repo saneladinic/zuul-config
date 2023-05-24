@@ -10,6 +10,19 @@
     check:
       jobs:
         - noop
+        - my-job
     gate:
       jobs:
         - noop
+        - my-job
+
+- job:
+    name: my-job
+    parent: base
+    description: Example job
+    run:
+      playbook: playbooks/my-playbook.yaml
+    required-projects:
+      - saneladinic/zuul-config
+    vars:
+      my_variable: value
