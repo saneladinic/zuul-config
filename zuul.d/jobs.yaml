@@ -5,3 +5,25 @@
       nodes:
         - name: ubuntu-jammy
           label: ubuntu-jammy
+    success:
+      github:
+        status: 'success' # Dodato: prikazuje status kao "success"
+    failure:
+      github:
+        status: 'failure' # Dodato: prikazuje status kao "failure"
+
+- project:
+    name: ^.*$
+    check:
+      jobs: []
+    gate:
+      jobs: []
+
+- project:
+    name: saneladinic/zuul-config
+    check:
+      jobs:
+        - noop
+    gate:
+      jobs:
+        - noop
