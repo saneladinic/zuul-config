@@ -10,11 +10,12 @@
         - event: pull_request
           action:
             - opened
-            - synchronize
+            - changed
+            - reopened
         # Run in response to a pull request comment "recheck"
-        - event: issue_comment
-          action: created
-          comment: '(?i)recheck'
+        - event: pull_request
+          action: comment
+          comment: (?i)^\s*recheck\s*$
         # When using the checks API to report results, failed runs
         # will have a "re-run" button which emits this event.
         - event: check_run
@@ -24,17 +25,17 @@
       github:
         check: 'in_progress'
         comment: false
-        #status: 'pending'
+        status: 'pending' # Dodato: prikazuje status kao "pending"
     success:
       github:
         check: 'success'
         comment: false
-        #status: 'success'
+        status: 'success' # Dodato: prikazuje status kao "success"
     failure:
       github:
         check: 'failure'
         comment: false
-        #status: 'failure'
+        status: 'failure' # Dodato: prikazuje status kao "failure"
     dequeue:
       github:
         check: cancelled
@@ -54,22 +55,25 @@
         review:
           # Require an approval from user with write access (e.g. core-reviewer)
           - permission: write
-            type: APPROVED
+            type: approved
         # Require label
         label: gate
-        open: true
-        current-patchset: true
+        open: True
+        current-patchset: True
     trigger:
       github:
         - event: pull_request_review
           action: submitted
-          state: APPROVED
-        - event: issue_comment
-          action: created
-          comment: '(?i)regate'
+          state: approved
+        - event: pull_request
+          action: comment
+          comment: (?i)^\s*regate\s*$
         - event: pull_request_review
           action: dismissed
-          state: CHANGES_REQUESTED
+          state: request_changes
+        - event: pull_request
+          action: status
+          status: ".*:success"
         - event: check_run
           action: rerequested
           check: .*/gate:.*
@@ -81,18 +85,18 @@
       github:
         check: 'in_progress'
         comment: false
-        #status: 'pending'
+        status: 'pending' # Dodato: prikazuje status kao "pending"
     success:
       github:
         check: 'success'
         comment: false
+        status: 'success' # Dodato: prikazuje status kao "success"
         merge: true
-        #status: 'success'
     failure:
       github:
         check: 'failure'
         comment: false
-        #status: 'failure'
+        status: 'failure' # Dodato: prikazuje status kao "failure"
     dequeue:
       github:
         check: cancelled
@@ -102,22 +106,3 @@
 
 - pipeline:
     name: post
-    post-review: true
-    description: This pipeline runs jobs that operate after each change is merged.
-    manager: independent
-    precedence: low
-    trigger:
-      github:
-        - event: push
-          ref: ^refs/heads/.*$
-
-- pipeline:
-    name: tag
-    description: This pipeline runs jobs in response to any tag event.
-    manager: independent
-    precedence: high
-    post-review: true
-    trigger:
-      github:
-        - event: push
-          ref: ^refs/tags/.*$
