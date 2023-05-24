@@ -1,339 +1,611 @@
-# This file is managed by ansible, do not edit directly
 ---
-- pipeline:
-    name: check
-    description: |
-      Newly uploaded patchsets enter this pipeline to receive an
-      initial +/-1 Verified vote.
-    manager: independent
-    trigger:
-      github.com:
-        - event: pull_request
-          action:
-            - opened
-            - changed
-            - reopened
-        - event: pull_request
-          action: comment
-          comment: (?i)^\s*recheck\s*$
-    start:
-      github.com:
-        status: 'pending'
-        status-url: "https://ansible.softwarefactory-project.io/zuul/status.html"
-        comment: false
-      mqtt:
-        topic: "zuul/{pipeline}/start/{project}/{branch}"
-    success:
-      github.com:
-        status: 'success'
-      mqtt:
-        topic: "zuul/{pipeline}/result/{project}/{branch}/{change}"
-    failure:
-      github.com:
-        status: 'failure'
-      mqtt:
-        topic: "zuul/{pipeline}/result/{project}/{branch}/{change}"
+# NOTE(Gonéri): I'm not sure about this one, but it seems to help
+# when the project is not defined here.
+- project:
+    name: ^(github.com/|)ansible-collections/.*
+    default-branch: main
 
-- pipeline:
-    name: gate
-    description: |
-      Changes that have been approved by core developers are enqueued
-      in order in this pipeline, and if they pass tests, will be
-      merged.
-    success-message: Build succeeded (gate pipeline).
-    failure-message: |
-      Build failed (gate pipeline).  For information on how to proceed, see
-      http://docs.openstack.org/infra/manual/developers.html#automated-testing
-    manager: dependent
-    precedence: high
-    supercedes: check
-    require:
-      github.com:
-        review: []
-        # Require label
-        label: mergeit
-        open: True
-        current-patchset: True
-    trigger:
-      github.com:
-        - event: pull_request_review
-          action: submitted
-          state: approved
-        - event: pull_request
-          action: comment
-          comment: (?i)^\s*regate\s*$
-        - event: pull_request_review
-          action: submitted
-          state: approved
-        - event: pull_request_review
-          action: dismissed
-          state: request_changes
-        - event: pull_request
-          action: status
-          status: "softwarefactory-project-zuul\\[bot\\]:ansible/check:success"
-        - event: pull_request
-          action: labeled
-          label:
-            - mergeit
-    start:
-      github.com:
-        status: 'pending'
-        status-url: "https://ansible.softwarefactory-project.io/zuul/status.html"
-        comment: false
-      mqtt:
-        topic: "zuul/{pipeline}/start/{project}/{branch}"
-    success:
-      github.com:
-        status: 'success'
-        merge: true
-        comment: true
-      mqtt:
-        topic: "zuul/{pipeline}/result/{project}/{branch}/{change}"
-    failure:
-      github.com:
-        status: 'failure'
-        comment: true
-      mqtt:
-        topic: "zuul/{pipeline}/result/{project}/{branch}/{change}"
-    window-floor: 20
-    window-increase-factor: 2
+- project:
+    name: ansible-collections/community.cassandra
+    default-branch: master
 
-- pipeline:
-    name: post
-    post-review: true
-    description: This pipeline runs jobs that operate after each change is merged.
-    manager: independent
-    precedence: low
-    trigger:
-      github.com:
-        - event: push
-          ref: ^refs/heads/.*$
-    start:
-      mqtt:
-        topic: "zuul/{pipeline}/start/{project}/{branch}"
-    success:
-      mqtt:
-        topic: "zuul/{pipeline}/result/{project}/{branch}/{change}"
-    failure:
-      smtp:
-        from: "ansible-zuul@redhat.com"
-        to: "ansible-zuul@redhat.com"
-        subject: '[Zuul] Job failed in post pipeline: {change.project}'
-      mqtt:
-        topic: "zuul/{pipeline}/result/{project}/{branch}/{change}"
+- project:
+    name: ansible-collections/community.elastic
+    default-branch: master
 
-- pipeline:
-    name: pre-release
-    description: When a commit is tagged with a pre-release tag, this pipeline runs jobs that publish archives and documentation.
-    manager: independent
-    precedence: high
-    post-review: True
-    trigger:
-      github.com:
-        - event: push
-          ref: ^refs/tags/(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*)|((?:[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))$
-    success:
-      mqtt:
-        topic: "zuul/{pipeline}/result/{project}/{branch}/{change}"
-    failure:
-      smtp:
-        from: "ansible-zuul@redhat.com"
-        to: "ansible-zuul@redhat.com"
-        subject: '[Zuul] Job failed in pre-release pipeline: {change.project}'
-      mqtt:
-        topic: "zuul/{pipeline}/result/{project}/{branch}/{change}"
+- project:
+    name: ansible-collections/community.mongodb
+    default-branch: master
 
-- pipeline:
-    name: release
-    post-review: true
-    description: When a commit is tagged as a release, this pipeline runs jobs that publish archives and documentation.
-    manager: independent
-    precedence: high
-    trigger:
-      github.com:
-        - event: push
-          ref: ^refs/tags/(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$
-    start:
-      mqtt:
-        topic: "zuul/{pipeline}/start/{project}/{branch}"
-    success:
-      mqtt:
-        topic: "zuul/{pipeline}/result/{project}/{branch}/{change}"
-    failure:
-      smtp:
-        from: "ansible-zuul@redhat.com"
-        to: "ansible-zuul@redhat.com"
-        subject: '[Zuul] Job failed in release pipeline: {change.project}'
-      mqtt:
-        topic: "zuul/{pipeline}/result/{project}/{branch}/{change}"
+- project:
+    name: ^(github.com/|)ansible-network/.*
+    default-branch: main
 
-- pipeline:
-    name: periodic
-    post-review: true
-    description: Jobs in this queue are triggered daily.
-    manager: independent
-    precedence: low
-    trigger:
-      timer:
-        - time: '0 0 * * *'
-    start:
-      mqtt:
-        topic: "zuul/{pipeline}/start/{project}/{branch}"
-    success:
-      mqtt:
-        topic: "zuul/{pipeline}/result/{project}/{branch}/{change}"
-    failure:
-      smtp:
-        from: "ansible-zuul@redhat.com"
-        to: "ansible-zuul@redhat.com"
-        subject: '[Zuul] Job failed in periodic pipeline: {change.project}'
-      mqtt:
-        topic: "zuul/{pipeline}/result/{project}/{branch}/{change}"
+- project:
+    name: ^(github.com/|)(ansible-collections|sap-linuxlab|openshift)/community\..*
+    templates:
+      - publish-to-galaxy-3pci
+
+- project:
+    name: ansible-collections/ansible.snmp
+    templates:
+      - publish-to-automation-hub
+      - publish-to-galaxy-3pci
+
+- project:
+    name: ansible-collections/hetzner.hcloud
+    templates:
+      - publish-to-galaxy-3pci
+
+- project:
+    name: ansible-collections/ibm.csm
+    templates:
+      - publish-to-galaxy-3pci
+
+- project:
+    name: ansible/ansible-zuul-jobs
+    default-branch: master
+    merge-mode: squash-merge
+    templates:
+      - system-required
+
+- project:
+    name: ansible/aws-ci-admin
+    default-branch: main
+    templates:
+      - ansible-aws-ci-admin
+
+- project:
+    name: ansible-collections/amazon.aws
+    default-branch: main
+    merge-mode: squash-merge
+    templates:
+      - publish-to-galaxy
+      - publish-to-automation-hub
+      - ansible-collections-amazon-aws-each-target
+      - ansible-collections-amazon-aws-integration
+
+- project:
+    name: ansible-collections/amazon_cloud_code_generator
+    default-branch: main
+    merge-mode: squash-merge
+    templates:
+      - system-required
+      - ansible-collections-amazon-cloud-code-generator
+
+- project:
+    name: ansible/ansible
+    default-branch: devel
+
+- project:
+    name: github.com/ansible-collections/ansible.windows
+    default-branch: main
+    templates:
+      - publish-to-galaxy-3pci
+    pre-release:
+      jobs:
+        - release-ansible-collection-automation-hub
+    release:
+      jobs:
+        - release-ansible-collection-automation-hub
+        - release-ansible-collection-announcement:
+            dependencies:
+              - name: release-ansible-collection-automation-hub
+              - name: release-ansible-collection-galaxy
+                soft: true
+
+- project:
+    name: ansible-collections/cloud.common
+    default-branch: main
+    merge-mode: squash-merge
+    templates:
+      - system-required
+      - ansible-collections-cloud-common
+      - ansible-python-jobs
+      - publish-to-galaxy
+      - publish-to-automation-hub
+
+- project:
+    name: ansible-collections/gouttelette
+    default-branch: main
+    merge-mode: squash-merge
+    templates:
+      - ansible-python-jobs
+      - ansible-collections-cloud-gouttelette-units
+
+- project:
+    name: ansible-network/releases
+    default-branch: master
+    check:
+      jobs:
+        - ansible-tox-linters
+    gate:
+      jobs:
+        - ansible-tox-linters
+
+- project:
+    name: ansible-collections/vmware.vmware_rest
+    default-branch: main
+    merge-mode: squash-merge
+    templates:
+      - system-required
+      - ansible-collections-community-vmware-rest
+      - publish-to-galaxy
+      - publish-to-automation-hub
+
+- project:
+    name: ansible-collections/community.vmware
+    default-branch: main
+    merge-mode: squash-merge
+    templates:
+      - system-required
+      - ansible-collections-community-vmware
+#      - integrated-vmware-queue
+      - publish-to-galaxy
+
+- project:
+    name: ansible-collections/community.aws
+    default-branch: main
+    merge-mode: squash-merge
+    templates:
+      - system-required
+      - publish-to-galaxy
+      - ansible-collections-community-aws
+      - ansible-collections-community-aws-integration
+
+- project:
+    name: ansible/zuul-config
+    default-branch: master
+    check:
+       jobs:
+        - refresh-automation-hub-token
+        - validate-ansible-galaxy-token
+    periodic:
+      jobs:
+        - refresh-automation-hub-token
+        - validate-ansible-galaxy-token
+
+- project:
+    name: ansible-collections/vmware_rest_code_generator
+    default-branch: main
+    templates:
+      - ansible-collections-community-vmware-rest-code-generator
+      - integrated-vmware-queue
+    check:
+      jobs:
+        - ansible-tox-linters
+    gate:
+      jobs:
+        - ansible-tox-linters
+
+- project:
+    name: ansible-collections/arista.eos
+    default-branch: main
+    merge-mode: squash-merge
+    templates:
+      - system-required
+      - ansible-collections-arista-eos
+      - ansible-python-jobs
+      - integrated-queue
+      - publish-to-galaxy
+      - publish-to-automation-hub
+
+- project:
+    name: ansible-collections/ansible.netcommon
+    default-branch: main
+    templates:
+      - system-required
+      - ansible-collections-ansible-netcommon
+      - ansible-collections-juniper-junos-netconf
+      - ansible-python-jobs
+      - integrated-queue
+      - publish-to-galaxy
+      - publish-to-automation-hub
+
+- project:
+    name: ansible-collections/ansible.utils
+    default-branch: main
+    templates:
+      - system-required
+      - publish-to-galaxy
+      - publish-to-automation-hub
+
+- project:
+    name: github.com/ansible-collections/checkpoint
+    merge-mode: squash-merge
+    templates:
+      - system-required
+      - ansible-python-jobs
+      - integrated-queue
+
+- project:
+    name: ansible-collections/openvswitch.openvswitch
+    default-branch: main
+    merge-mode: squash-merge
+    templates:
+      - system-required
+      - ansible-collections-openvswitch-openvswitch
+      - ansible-python-jobs
+      - integrated-queue
+      - publish-to-galaxy
+      - publish-to-automation-hub
+
+- project:
+    name: ansible/network-ee
+    default-branch: main
+    check:
+      jobs:
+        - ansible-tox-linters
+    gate:
+      jobs:
+        - ansible-tox-linters
+
+- project:
+    name: github.com/ansible-collections/kubernetes.core
+    default-branch: main
+    merge-mode: squash-merge
+    templates:
+      - system-required
+      - ansible-collections-kubernetes-core-units
+      - publish-to-galaxy
+      - publish-to-automation-hub
+
+- project:
+    name: github.com/openshift/community.okd
+    default-branch: main
+    merge-mode: squash-merge
+    templates:
+      - ansible-collections-community-okd
+
+- project:
+    name: github.com/ansible-collections/servicenow.itsm
+    default-branch: main
+    merge-mode: squash-merge
+    templates:
+      - system-required
+      - ansible-collections-servicenow-itsm-units
+      - publish-to-galaxy
+      - publish-to-automation-hub
+
+- project:
+    name: github.com/ansible-network/network-engine
+    default-branch: devel
+    templates:
+      - ansible-python3-jobs
+    check:
+      jobs:
+        - ansible-tox-linters
+    gate:
+      jobs:
+        - ansible-tox-linters
+
+- project:
+    name: github.com/ansible-collections/ansible.posix
+    default-branch: main
+    templates:
+      - system-required
+      - ansible-collections-ansible-posix-units
+      - publish-to-galaxy
+      - publish-to-automation-hub
+
+- project:
+    name: ansible-collections/frr.frr
+    merge-mode: squash-merge
+    templates:
+      - system-required
+      - ansible-python-jobs
+      - publish-to-galaxy
+      - publish-to-automation-hub
+
+- project:
+    name: github.com/ansible-collections/skydive
+    merge-mode: squash-merge
+    templates:
+      - system-required
+      - ansible-python-jobs
+      - integrated-queue
+      - publish-to-galaxy
+
+- project:
+    name: ansible-network/network-runner
+    default-branch: devel
+    templates:
+      - ansible-python3-jobs
+    check:
+      jobs:
+        - ansible-tox-linters
+    gate:
+      jobs:
+        - ansible-tox-linters
+
+- project:
+    name: github.com/ansible-security/ids_config
+    check:
+      jobs:
+        - ansible-tox-linters
+    gate:
+      jobs:
+        - ansible-tox-linters
+
+- project:
+    name: github.com/ansible-security/ids_install
+    check:
+      jobs:
+        - ansible-tox-linters
+    gate:
+      jobs:
+        - ansible-tox-linters
+
+- project:
+    name: ansible/ansible-builder
+    default-branch: devel
+    merge-mode: squash-merge
+    templates:
+      - system-required
+
+- project:
+    name: ansible/ansible-core-image
+    default-branch: main
+
+- project:
+    name: ansible/ansible-navigator
+    default-branch: main
+    merge-mode: squash-merge
+    templates:
+      - system-required
+      - publish-to-pypi
+
+- project:
+    name: ansible/ansible-runner
+    default-branch: devel
+    merge-mode: squash-merge
+    templates:
+      - system-required
+
+- project:
+    name: ansible/network
+    default-branch: devel
+    templates:
+      - system-required
+    check:
+      jobs:
+        - ansible-tox-linters
+    gate:
+      jobs:
+        - ansible-tox-linters
+
+- project:
+    name: ansible/python-base-image
+    default-branch: main
+
+- project:
+    name: ansible/python-builder-image
+    default-branch: main
+
+- project:
+    name: ansible-collections/ansible.security
+    default-branch: main
+    merge-mode: squash-merge
+    templates:
+      - system-required
+      - publish-to-galaxy
+      - publish-to-automation-hub
+      - ansible-collections-ansible-security
+      - ansible-python-jobs
+
+- project:
+    name: ansible-collections/arista.eos
+    default-branch: main
+    merge-mode: squash-merge
+    templates:
+      - system-required
+      - publish-to-galaxy
+      - publish-to-automation-hub
+
+- project:
+    name: github.com/ansible-collections/community.asa
+    default-branch: main
+    merge-mode: squash-merge
+    templates:
+      - system-required
+      - ansible-collections-community-asa
+      - ansible-collections-community-asa-units
+
+- project:
+    name: ansible-collections/cisco.asa
+    default-branch: main
+    merge-mode: squash-merge
+    templates:
+      - system-required
+      - publish-to-galaxy
+      - publish-to-automation-hub
+      - ansible-collections-cisco-asa
+      - ansible-collections-cisco-asa-units
+      - ansible-python-jobs
+      - integrated-queue
+
+- project:
+    name: ansible-collections/cisco.ios
+    default-branch: main
+    merge-mode: squash-merge
+    templates:
+      - system-required
+      - publish-to-galaxy
+      - publish-to-automation-hub
+      - ansible-collections-cisco-ios
+      - ansible-python-jobs
+
+- project:
+    name: ansible-collections/cisco.iosxr
+    default-branch: main
+    merge-mode: squash-merge
+    templates:
+      - system-required
+      - publish-to-galaxy
+      - publish-to-automation-hub
+      - ansible-collections-cisco-iosxr
+      - ansible-python-jobs
+      - integrated-queue
+
+- project:
+    name: ansible-collections/cisco.nxos
+    default-branch: main
+    merge-mode: squash-merge
+    templates:
+      - system-required
+      - publish-to-galaxy
+      - publish-to-automation-hub
+      - system-required
+      - ansible-collections-cisco-nxos
+      - ansible-python-jobs
+      - integrated-queue
+
+- project:
+    name: ansible-collections/cisco.asa
+    default-branch: main
+    merge-mode: squash-merge
+    templates:
+      - system-required
+      - publish-to-galaxy
+      - publish-to-automation-hub
+
+- project:
+    name: ansible-collections/community.yang
+    default-branch: main
+    merge-mode: squash-merge
+    templates:
+      - system-required
+      - publish-to-galaxy
+      - ansible-collections-community-yang-juniper-junos
+      - ansible-collections-community-yang-cisco-iosxr
+      - ansible-collections-community-yang-units
+      - ansible-python-jobs
+
+- project:
+    name: ansible-collections/ansible.yang
+    default-branch: main
+    merge-mode: squash-merge
+    templates:
+      - system-required
+      - publish-to-galaxy
+      - publish-to-automation-hub
+      - ansible-collections-ansible-yang-juniper-junos
+      - ansible-collections-ansible-yang-cisco-iosxr
+      - ansible-collections-ansible-yang-units
+      - ansible-python-jobs
+
+- project:
+    name: ansible-collections/ibm.qradar
+    default-branch: main
+    merge-mode: squash-merge
+    templates:
+      - system-required
+      - publish-to-galaxy
+      - publish-to-automation-hub
+      - ansible-collections-security-ibm-qradar
+      - ansible-python-jobs
+      - integrated-queue
 
 
-- pipeline:
-    name: periodic-1hr
-    post-review: true
-    description: Jobs in this queue are triggered hourly.
-    manager: independent
-    precedence: low
-    trigger:
-      timer:
-        - time: '0 * * * *'
-    start:
-      mqtt:
-        topic: "zuul/{pipeline}/start/{project}/{branch}"
-    success:
-      mqtt:
-        topic: "zuul/{pipeline}/result/{project}/{branch}/{change}"
-    failure:
-      smtp:
-        from: "ansible-zuul@redhat.com"
-        to: "ansible-zuul@redhat.com"
-        subject: '[Zuul] Job failed in periodic-1hr pipeline: {change.project}'
-      mqtt:
-        topic: "zuul/{pipeline}/result/{project}/{branch}/{change}"
+- project:
+    name: ansible-collections/junipernetworks.junos
+    default-branch: main
+    merge-mode: squash-merge
+    templates:
+      - system-required
+      - ansible-collections-juniper-junos
+      - ansible-python-jobs
+      - integrated-queue
+      - publish-to-galaxy
+      - publish-to-automation-hub
 
-- pipeline:
-    name: periodic-6hr
-    post-review: true
-    description: Jobs in this queue are triggered every 6 hours.
-    manager: independent
-    precedence: low
-    trigger:
-      timer:
-        - time: '0 */6 * * *'
-    start:
-      mqtt:
-        topic: "zuul/{pipeline}/start/{project}/{branch}"
-    success:
-      mqtt:
-        topic: "zuul/{pipeline}/result/{project}/{branch}/{change}"
-    failure:
-      smtp:
-        from: "ansible-zuul@redhat.com"
-        to: "ansible-zuul@redhat.com"
-        subject: '[Zuul] Job failed in periodic-6hr pipeline: {change.project}'
-      mqtt:
-        topic: "zuul/{pipeline}/result/{project}/{branch}/{change}"
+- project:
+    name: ansible-collections/splunk.es
+    default-branch: main
+    merge-mode: squash-merge
+    templates:
+      - system-required
+      - publish-to-galaxy
+      - publish-to-automation-hub
+      - ansible-collections-security-splunk-es
+
+- project:
+    name: ansible-collections/symantec.epm
+    default-branch: main
+    merge-mode: squash-merge
+    templates:
+      - system-required
+      - publish-to-galaxy
+      - publish-to-automation-hub
+      - ansible-collections-symantec-epm-units
+      - ansible-python-jobs
+
+- project:
+    name: ansible-collections/trendmicro.deepsec
+    default-branch: main
+    merge-mode: squash-merge
+    templates:
+      - system-required
+      - publish-to-galaxy
+      - publish-to-automation-hub
+      - ansible-collections-security-trendmicro-deepsec-units
+      - ansible-python-jobs
+
+- project:
+    name: ansible-collections/vyos.vyos
+    default-branch: main
+    merge-mode: squash-merge
+    templates:
+      - system-required
+      - publish-to-galaxy
+      - publish-to-automation-hub
+      - ansible-collections-vyos-vyos
+      - ansible-python-jobs
+
+- project:
+    name: ansible-network/ansible_content_collections_metrics
+    merge-mode: squash-merge
+    templates:
+      - ansible-python-jobs
+
+- project:
+    name: ansible-collections/ansible.network
+    default-branch: main
+    merge-mode: squash-merge
+    templates:
+      - system-required
+      - publish-to-galaxy
+      - publish-to-automation-hub
+      - integrated-queue
+      - ansible-collections-ansible-network
+      - ansible-collections-ansible-network-units
+      - ansible-python-jobs
+
+- project:
+    name: ansible-collections/community.cip
+    default-branch: main
+    templates:
+      - publish-to-galaxy
+
+- project:
+    name: ansible-collections/microsoft.ad
+    default-branch: main
+    templates:
+      - publish-to-galaxy
+      - publish-to-automation-hub
+
+- project:
+    name: ansible-collections/osbuild.composer
+    default-branch: main
+    templates:
+      - publish-to-galaxy
 
 
-- pipeline:
-    name: periodic-weekly
-    post-review: true
-    description: Jobs in this queue are triggered on a weekly timer.
-    manager: independent
-    precedence: low
-    trigger:
-      timer:
-        # Saturday 8am UTC is a better time to start weekend jobs, as Sunday
-        # is a working day in some geographies.
-        - time: '0 8 * * 6'
-    start:
-      mqtt:
-        topic: "zuul/{pipeline}/start/{project}/{branch}"
-    success:
-      mqtt:
-        topic: "zuul/{pipeline}/result/{project}/{branch}/{change}"
-    failure:
-      smtp:
-        from: "ansible-zuul@redhat.com"
-        to: "ansible-zuul@redhat.com"
-        subject: '[Zuul] Job failed in periodic-weekly pipeline: {change.project}'
-      mqtt:
-        topic: "zuul/{pipeline}/result/{project}/{branch}/{change}"
-
-- pipeline:
-    name: ondemand
-    description: On-demand pipeline for requesting a run of optional tests in a collection. Leave review comment of "check ondemand" to run jobs in this pipeline.
-    manager: independent
-    precedence: low
-    trigger:
-      github.com:
-        - event: pull_request
-          action: comment
-          comment: (?i)^\s*check ondemand\s*$
-    start:
-      github.com:
-        status: 'pending'
-        status-url: "https://ansible.softwarefactory-project.io/zuul/status.html"
-        comment: false
-      mqtt:
-        topic: "zuul/{pipeline}/start/{project}/{branch}"
-    success:
-      github.com:
-        check: success
-        comment: false
-    failure:
-      github.com:
-        check: failure
-        comment: false
-
-- pipeline:
-    name: merge-check
-    description: >
-      Each time a change merges, this pipeline verifies that all open changes
-      on the same project are still mergeable.
-    failure-message: Build failed (merge-check pipeline).
-    manager: independent
-    ignore-dependencies: true
-    precedence: low
-    trigger: {}
-
-- pipeline:
-    name: third-party-check
-    description: |
-      Newly uploaded patchsets to projects that are external to OpenStack
-      enter this pipeline to receive an initial +/-1 Verified vote.
-    success-message: Build succeeded (third-party-check pipeline).
-    # TODO(mordred) We should write a document for non-OpenStack developers
-    failure-message: |
-      Build failed (third-party-check pipeline) integration testing with
-      OpenStack. For information on how to proceed, see
-      http://docs.openstack.org/infra/manual/developers.html#automated-testing
-    manager: independent
-    trigger:
-      github.com:
-        - event: pull_request
-          action:
-            - opened
-            - changed
-            - reopened
-        - event: pull_request
-          action: comment
-          comment: (?i)^\s*recheck\s*$
-    start:
-      github.com:
-        status: 'pending'
-        status-url: 'https://ansible.softwarefactory-project.io/zuul/status.html'
-        comment: false
-    success:
-      github.com:
-        status: 'success'
-        comment: false
-    failure:
-      github.com:
-        status: 'failure'
-        comment: false
-    # Don't report merge-failures to github
-    merge-conflict: {}
+- project:
+    name: github.com/ansible-collections/cloud.terraform
+    default-branch: main
+    merge-mode: squash-merge
+    templates:
+      - system-required
+      - publish-to-galaxy
+      - publish-to-automation-hub
