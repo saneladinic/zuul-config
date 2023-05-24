@@ -10,12 +10,11 @@
         - event: pull_request
           action:
             - opened
-            - changed
-            - reopened
+            - synchronize
         # Run in response to a pull request comment "recheck"
-        - event: pull_request
-          action: comment
-          comment: (?i)^\s*recheck\s*$
+        - event: issue_comment
+          action: created
+          comment: '(?i)recheck'
         # When using the checks API to report results, failed runs
         # will have a "re-run" button which emits this event.
         - event: check_run
@@ -25,19 +24,7 @@
       github:
         check: 'in_progress'
         comment: false
-        # It is recommended to use the checks API for consistency with
-        # other common CI tools that integrate with Github.  Results
-        # will appear on the "checks" tab of PR and changes.  There is
-        # generally no need to have Zuul leave comments when using the
-        # checks API.
-        #
-        # The older status API appears inline with the PR and can be
-        # enabled by uncommenting the "status:" in the various
-        # sections below.  You should choose one or the other
-        # depending on project preferences.
-        #
         #status: 'pending'
-        #comment: false
     success:
       github:
         check: 'success'
@@ -67,25 +54,22 @@
         review:
           # Require an approval from user with write access (e.g. core-reviewer)
           - permission: write
-            type: approved
+            type: APPROVED
         # Require label
         label: gate
-        open: True
-        current-patchset: True
+        open: true
+        current-patchset: true
     trigger:
       github:
         - event: pull_request_review
           action: submitted
-          state: approved
-        - event: pull_request
-          action: comment
-          comment: (?i)^\s*regate\s*$
+          state: APPROVED
+        - event: issue_comment
+          action: created
+          comment: '(?i)regate'
         - event: pull_request_review
           action: dismissed
-          state: request_changes
-        - event: pull_request
-          action: status
-          status: ".*:success"
+          state: CHANGES_REQUESTED
         - event: check_run
           action: rerequested
           check: .*/gate:.*
@@ -102,13 +86,13 @@
       github:
         check: 'success'
         comment: false
-        #status: 'success'
         merge: true
+        #status: 'success'
     failure:
       github:
         check: 'failure'
-        #status: 'failure'
         comment: false
+        #status: 'failure'
     dequeue:
       github:
         check: cancelled
@@ -132,7 +116,7 @@
     description: This pipeline runs jobs in response to any tag event.
     manager: independent
     precedence: high
-    post-review: True
+    post-review: true
     trigger:
       github:
         - event: push
