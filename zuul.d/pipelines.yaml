@@ -1,150 +1,34 @@
 - pipeline:
-    name: check
-    description: |
-      Newly uploaded patchsets enter this pipeline to receive an
-      initial +/-1 Verified vote.
+    name: connect_to_github
+    description: Pipeline for connecting Zuul to GitHub
     manager: independent
     precedence: normal
     trigger:
       github:
-        # Run this pipeline on new/changed pull requests
+        - event: push
+          ref: ^refs/heads/.*$
         - event: pull_request
           action:
             - opened
-            - changed
-            - reopened
-        # When using the checks API to report results, failed runs
-        # will have a "re-run" button which emits this event.
-        - event: check_run
-          action: rerequested
-          check: '.*/check:.*'
+            - synchronize
+        - event: status
     start:
       github:
         check: 'in_progress'
-        comment: false
+        comment: true
+        message: 'Pipeline execution started.'
     success:
       github:
         check: 'success'
-        comment: false
+        comment: true
+        message: 'Pipeline executed successfully.'
     failure:
       github:
         check: 'failure'
-        comment: false
+        comment: true
+        message: 'Pipeline execution failed.'
     dequeue:
       github:
         check: 'cancelled'
-        comment: false
-
-- pipeline:
-    name: gate
-    description: |
-      Changes that have been approved are enqueued in order in this
-      pipeline, and if they pass tests, will be merged. For
-      documentation on how gating with Zuul works, please see
-      https://zuul-ci.org/docs/zuul/latest/gating.html
-    manager: dependent
-    precedence: high
-    supercedes: check
-    post-review: True
-    require:
-      github:
-        # Require label
-        label: gate
-        open: True
-        current-patchset: True
-    trigger:
-      github:
-        - event: pull_request_review
-          action: submitted
-          state: approved
-        - event: pull_request_review
-          action: dismissed
-          state: request_changes
-        - event: check_run
-          action: rerequested
-          check: '.*/gate:.*'
-        - event: pull_request
-          action: labeled
-          label:
-            - gate
-    start:
-      github:
-        check: 'in_progress'
-        comment: false
-    success:
-      github:
-        check: 'success'
-        comment: false
-        merge: true
-    failure:
-      github:
-        check: 'failure'
-        comment: false
-    dequeue:
-      github:
-        check: cancelled
-        comment: false
-    window-floor: 20
-    window-increase-factor: 2
-
-- pipeline:
-    name: post
-    post-review: true
-    description: This pipeline runs jobs that operate after each change is merged.
-    manager: independent
-    precedence: low
-    trigger:
-      github:
-        - event: push
-          ref: ^refs/heads/.*$
-       
-- pipeline:
-    name: promote
-    description: |
-      This pipeline runs jobs that operate after each change is merged
-      in order to promote artifacts generated in the gate
-      pipeline.
-    manager: supercedent
-    precedence: high
-    post-review: True
-    require:
-      github:
-        merged: True
-    trigger:
-      github:
-        - event: pull_request
-          action: closed
-
-- pipeline:
-    name: release
-    description: |
-      When a commit is tagged as a release, this pipeline runs jobs
-      that publish archives and documentation.
-    manager: independent
-    precedence: high
-    post-review: True
-    trigger:
-      github:
-        - event: push
-          ref: ^refs/tags/[0-9]+(\.[0-9]+)*$
-
-- pipeline:
-    name: daily
-    post-review: true
-    description: Jobs in this queue are triggered on a timer.
-    manager: independent
-    precedence: low
-    trigger:
-      timer:
-        - time: '0 6 * * *'
-
-- pipeline:
-    name: tag
-    description: This pipeline runs jobs in response to any tag event.
-    manager: independent
-    precedence: high
-    post-review: True
-    trigger:
-      github:
-        - event: push
-          ref: ^refs/tags/.*$
+        comment: true
+        message: 'Pipeline execution cancelled.'
