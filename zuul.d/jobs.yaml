@@ -5,9 +5,3 @@
       nodes:
         - name: ubuntu-jammy
           label: ubuntu-jammy
-    success:
-      github:
-        status: 'success' # Dodato: prikazuje status kao "success"
-    failure:
-      github:
-        status: 'failure' # Dodato: prikazuje status kao "failure"
