@@ -137,3 +137,11 @@
       github:
         - event: push
           ref: ^refs/tags/.*$
+
+- pipeline:
+    name: github-merge
+    description: Pipeline for jobs triggered after each change is merged from GitHub
+    trigger:
+      github:
+        - event:
+            type: change-merged
