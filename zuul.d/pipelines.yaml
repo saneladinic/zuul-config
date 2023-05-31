@@ -142,7 +142,7 @@
     name: gate
     manager: independent
     trigger:
-      gerrit:
+      github:
         - event: patchset-created
           branches:
             - master
