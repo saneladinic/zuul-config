@@ -13,8 +13,8 @@
     gate:
       jobs:
         - noop
-        
- - project:
-    name: saneladinic/neuronix-devops
+
+- project:
+    name: saneladinic/zuul-config
     check:
-      - gate
+      - gate        
