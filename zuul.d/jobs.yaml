@@ -11,7 +11,7 @@
     parent: base
     run: playbook/testjob.yaml
     required-projects:
-      - name: saneladinic/zuul-config
+      - name: saneladinic/neuronix-devops
     vars:
       ARTIFACTORY_URL: http://192.168.33.77:8082/
       ARTIFACTORY_USERNAME: admin
