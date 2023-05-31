@@ -13,3 +13,8 @@
     gate:
       jobs:
         - noop
+        
+ - project:
+    name: saneladinic/neuronix-devops
+    check:
+      - gate
