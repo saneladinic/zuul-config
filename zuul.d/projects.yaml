@@ -13,8 +13,3 @@
     gate:
       jobs:
         - noop
-
-- project:
-    name: neuronix-devops
-    check:
-      - gate        
