@@ -5,3 +5,14 @@
       nodes:
         - name: ubuntu-jammy
           label: ubuntu-jammy
+          
+- job:          
+    name: integration-with-artifactory
+    parent: base
+    run: playbook/testjob.yaml
+    required-projects:
+      - name: neuronix-devops
+    vars:
+      ARTIFACTORY_URL: <artifactory-url>
+      ARTIFACTORY_USERNAME: admin
+      ARTIFACTORY_PASSWORD: Projekat123!
