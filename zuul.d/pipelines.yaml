@@ -137,14 +137,3 @@
       github:
         - event: push
           ref: ^refs/tags/.*$
-          
-- pipeline:
-    name: gate
-    manager: independent
-    trigger:
-      github:
-        - event: patchset-created
-          branches:
-            - master
-    success:
-      - integration-with-artifactory
