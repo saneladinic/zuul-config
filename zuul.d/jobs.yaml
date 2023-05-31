@@ -13,6 +13,6 @@
     required-projects:
       - name: neuronix-devops
     vars:
-      ARTIFACTORY_URL: <artifactory-url>
+      ARTIFACTORY_URL: http://192.168.33.77:8082
       ARTIFACTORY_USERNAME: admin
       ARTIFACTORY_PASSWORD: Projekat123!
