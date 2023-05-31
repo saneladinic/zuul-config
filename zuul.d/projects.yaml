@@ -15,6 +15,6 @@
         - noop
 
 - project:
-    name: saneladinic/neuronix-devops
+    name: neuronix-devops
     check:
       - gate        
