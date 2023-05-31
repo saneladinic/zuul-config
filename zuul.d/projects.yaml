@@ -15,6 +15,6 @@
         - noop
 
 - project:
-    name: saneladinic/zuul-config
+    name: saneladinic/neuronix-devops
     check:
       - gate        
